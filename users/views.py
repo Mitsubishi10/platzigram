@@ -1,16 +1,9 @@
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
-from django.shortcuts import render, redirect 
-
-#Exception 
-from django.db.utils import IntegrityError
-
-#Models
-from django.contrib.auth.models import User
-from users.models import Profile 
+from django.shortcuts import render, redirect
 
 #forms
-from users.forms import ProfileForm
+from users.forms import ProfileForm, SignupForm
 
 
 #funcion de login
@@ -18,7 +11,7 @@ def login_view(request):
 
     if request.method == 'POST':
         username = request.POST['username']
-        password =request.POST['password']
+        password = request.POST['password']
         user = authenticate(request, username=username, password=password)
 
         if user:
@@ -32,31 +25,22 @@ def login_view(request):
 
 #funcion de crear una cuenta
 def signup(request):
-
+    """ METODO DE INSCRIBIRSE """
     if request.method == 'POST':
-        username = request.POST['username']
-        passwd = request.POST['passwd']
-        passwd_confirmation = request.POST['passwd_confirmation'] 
+        form = SignupForm(request.POST)
+        if form.is_valid():
+            form.save()
+            return redirect('login')
+        else:
+            form = SignupForm()
 
-        if passwd != passwd_confirmation:
-            return render(request,'users/signup.html', {'error':'Password confirmation does not match'})
+        return render(
+            request=request,
+            template_name='users/signup.html',
+            context={'form': form}
+        )
 
-        try:
-            user = User.objects.create_user(username=username, password=passwd)
-        except IntegrityError:
-            return render(request, 'users/signup.html', {'error':'Username in already in user'})
 
-        user.first_name = request.POST['first_name']
-        user.last_name = request.POST['last_name']       
-        user.email = request.POST['email'] 
-        user.save()
-
-        profile = Profile(user=user)
-        profile.save() 
-
-        return redirect('login')
-            
-    return render(request,'users/signup.html')
 
 
 #funcion de cierre de sesion 
@@ -73,7 +57,7 @@ def update_profile(request):
     profile = request.user.profile
 
     if request.method == 'POST':
-        form = ProfileForm(request.POST,request.FILES)
+        form = ProfileForm(request.POST, request.FILES)
         if form.is_valid():
             data = form.cleaned_data
 
@@ -84,6 +68,7 @@ def update_profile(request):
             profile.save()
 
             return redirect('update_profile')
+
         else:
             form = ProfileForm()
 
@@ -93,7 +78,7 @@ def update_profile(request):
             context={
                 'profile': profile,
                 'user': request.user,
-                'form':form
+                'form': form
 
             }
         )
